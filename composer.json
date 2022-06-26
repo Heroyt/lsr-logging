@@ -1,0 +1,29 @@
+{
+    "name": "lsr/logging",
+    "description": "Laser framework core - Logging",
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packages.laserliga.cz"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Lsr\\Logging\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Tomáš Vojík",
+            "email": "vojik@wboy.cz"
+        }
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "require": {
+        "psr/log": "^3.0",
+        "lsr/helpers": "dev-master",
+        "dibi/dibi": "^4.2"
+    }
+}

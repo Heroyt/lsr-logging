@@ -1,0 +1,7 @@
+parameters:
+	logger:
+		dir: LOG_DIR
+		name: 'app'
+services:
+	logger:
+		create: App\Logging\Logger(%logger.dir%, %logger.name%)
