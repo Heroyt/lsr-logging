@@ -3,7 +3,7 @@
  * @author Tomáš Vojík <xvojik00@stud.fit.vutbr.cz>, <vojik@wboy.cz>
  */
 
-namespace App\Logging\Exceptions;
+namespace Lsr\Logging\Exceptions;
 
 use Exception;
 use Throwable;
