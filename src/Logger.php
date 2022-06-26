@@ -3,7 +3,7 @@
  * @author Tomáš Vojík <xvojik00@stud.fit.vutbr.cz>, <vojik@wboy.cz>
  */
 
-namespace App\Logging;
+namespace Lsr\Logging;
 
 
 use App\Logging\Exceptions\ArchiveCreationException;
@@ -167,7 +167,7 @@ class Logger extends AbstractLogger
 		$this->error('Thrown Exception ('.$exception->getCode().'): '.$exception->getMessage());
 		$this->debug($exception->getTraceAsString());
 	}
-	
+
 	/**
 	 * Log any dibi database event
 	 *
