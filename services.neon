@@ -4,4 +4,4 @@ parameters:
 		name: 'app'
 services:
 	logger:
-		create: App\Logging\Logger(%logger.dir%, %logger.name%)
+		create: Lsr\Logging\Logger(%logger.dir%, %logger.name%)
