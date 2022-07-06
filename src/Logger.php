@@ -6,13 +6,13 @@
 namespace Lsr\Logging;
 
 
-use App\Logging\Exceptions\ArchiveCreationException;
-use App\Logging\Exceptions\DirectoryCreationException;
 use dibi;
 use Dibi\Event;
-use Dibi\Exception;
+use Exception;
 use Lsr\Helpers\Tracy\DbTracyPanel;
 use Lsr\Helpers\Tracy\Events\DbEvent;
+use Lsr\Logging\Exceptions\ArchiveCreationException;
+use Lsr\Logging\Exceptions\DirectoryCreationException;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
 use ZipArchive;
