@@ -1,6 +1,6 @@
 parameters:
 	logger:
-		dir: LOG_DIR
+		dir: '%constants.appDir%logs'
 		name: 'app'
 services:
 	logger:
