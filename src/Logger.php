@@ -28,6 +28,8 @@ class Logger extends AbstractLogger
 	public const MAX_LOG_LIFE = '-2 days';
 	protected string $file;
 	protected        $handle;
+	protected array $baseDir = [];
+	protected string $basePath = '';
 
 	/**
 	 * Logger constructor.
@@ -38,6 +40,15 @@ class Logger extends AbstractLogger
 	 * @throws DirectoryCreationException
 	 */
 	public function __construct(string $path, string $fileName = 'logging') {
+
+		$baseDir = ini_get('open_basedir');
+		if ($baseDir !== false) {
+			$dirs = explode(':', $baseDir);
+			$this->basePath = '';
+			$this->baseDir = array_filter(explode(DIRECTORY_SEPARATOR, $dirs[0]), static function($dir) {
+				return !empty($dir) && $dir !== '.';
+			});
+		}
 
 		$directory = '';
 		if ($path[0] !== '/' || !$this->checkWinPath($path)) {
@@ -89,7 +100,10 @@ class Logger extends AbstractLogger
 	 * @throws DirectoryCreationException
 	 */
 	protected function createDirRecursive(string &$directory, array &$path) : void {
-		if (!file_exists($directory) && !mkdir($directory) && !is_dir($directory)) {
+		if (count($this->baseDir) > 0) {
+			$this->basePath .= '/'.array_shift($this->baseDir);
+		}
+		if ($this->basePath !== $directory && !file_exists($directory) && !mkdir($directory) && !is_dir($directory)) {
 			throw new DirectoryCreationException($directory);
 		}
 		if (count($path) > 0) {
@@ -153,6 +167,9 @@ class Logger extends AbstractLogger
 	 * @throws InvalidArgumentException
 	 */
 	public function log($level, $message, array $context = []) : void {
+		if (!is_resource($this->handle)) {
+			$this->handle = fopen($this->file, 'ab');
+		}
 		fwrite($this->handle, sprintf('[%s] %s: %s'.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message));
 	}
 

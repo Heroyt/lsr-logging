@@ -1,7 +1,7 @@
 {
 	"name": "lsr/logging",
 	"description": "Laser framework core - Logging",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"repositories": [
 		{
 			"type": "composer",
@@ -24,7 +24,7 @@
 		"phpunit/phpunit": "^9.5"
 	},
 	"require": {
-		"psr/log": "^3.0",
+		"psr/log": "*",
 		"lsr/helpers": "^0.1",
 		"dibi/dibi": "^4.2"
 	}
