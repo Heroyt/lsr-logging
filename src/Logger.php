@@ -9,6 +9,8 @@ namespace Lsr\Logging;
 use dibi;
 use Dibi\Event;
 use Exception;
+use JsonException;
+use Lsr\Exceptions\FileException;
 use Lsr\Helpers\Tracy\DbTracyPanel;
 use Lsr\Helpers\Tracy\Events\DbEvent;
 use Lsr\Logging\Exceptions\ArchiveCreationException;
@@ -27,8 +29,10 @@ class Logger extends AbstractLogger
 
 	public const MAX_LOG_LIFE = '-2 days';
 	protected string $file;
-	protected        $handle;
-	protected array $baseDir = [];
+	/** @var false|resource */
+	protected $handle;
+	/** @var string[] */
+	protected array  $baseDir  = [];
 	protected string $basePath = '';
 
 	/**
@@ -41,6 +45,7 @@ class Logger extends AbstractLogger
 	 */
 	public function __construct(string $path, string $fileName = 'logging') {
 
+		/** @var string|false $baseDir */
 		$baseDir = ini_get('open_basedir');
 		if ($baseDir !== false) {
 			$dirs = explode(':', $baseDir);
@@ -94,8 +99,8 @@ class Logger extends AbstractLogger
 	/**
 	 * Create a directory structure to
 	 *
-	 * @param string $directory Current directory path
-	 * @param array  $path      Remaining subdirectories
+	 * @param string   $directory Current directory path
+	 * @param string[] $path      Remaining subdirectories
 	 *
 	 * @throws DirectoryCreationException
 	 */
@@ -121,7 +126,11 @@ class Logger extends AbstractLogger
 	 * @throws ArchiveCreationException
 	 */
 	protected function archiveOld(string $path, string $fileName) : void {
+		/** @var string[]|false $files */
 		$files = glob($path.$fileName.'-*.log');
+		if ($files === false) {
+			$files = [];
+		}
 		$archiveFiles = [];
 		$maxLife = strtotime($this::MAX_LOG_LIFE);
 		foreach ($files as $file) {
@@ -149,8 +158,11 @@ class Logger extends AbstractLogger
 		}
 	}
 
+	/**
+	 * @post Close opened file handle
+	 */
 	public function __destruct() {
-		if (isset($this->handle) && is_resource($this->handle)) {
+		if (is_resource($this->handle)) {
 			fclose($this->handle);
 		}
 	}
@@ -158,19 +170,29 @@ class Logger extends AbstractLogger
 	/**
 	 * Logs with an arbitrary level.
 	 *
-	 * @param mixed  $level
-	 * @param string $message
-	 * @param array  $context
+	 * @param string               $level
+	 * @param string               $message
+	 * @param array<string, mixed> $context
 	 *
 	 * @return void
 	 *
-	 * @throws InvalidArgumentException
+	 * @throws InvalidArgumentException|FileException
 	 */
 	public function log($level, $message, array $context = []) : void {
 		if (!is_resource($this->handle)) {
 			$this->handle = fopen($this->file, 'ab');
+			if ($this->handle === false) {
+				throw new FileException('Cannot open log file - '.$this->file);
+			}
 		}
-		fwrite($this->handle, sprintf('[%s] %s: %s'.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message));
+		$contextFormatted = '';
+		if (!empty($context)) {
+			try {
+				$contextFormatted = ' '.json_encode($contextFormatted, JSON_THROW_ON_ERROR);
+			} catch (JsonException) {
+			}
+		}
+		fwrite($this->handle, sprintf('[%s] %s: %s'.$contextFormatted.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message));
 	}
 
 	/**
@@ -195,7 +217,7 @@ class Logger extends AbstractLogger
 	public function logDb(Event $event) : void {
 		// Create tracy log event
 		$logEvent = new DbEvent;
-		$logEvent->sql = dibi::dump($event->sql, TRUE);
+		$logEvent->sql = dibi::dump($event->sql, true) ?? '';
 		$logEvent->source = str_replace(ROOT, '', implode(':', $event->source));
 		$logEvent->time = $event->time;
 		$logEvent->count = (int) $event->count;
