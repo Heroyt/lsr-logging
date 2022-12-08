@@ -35,6 +35,8 @@ class Logger extends AbstractLogger
 	protected array  $baseDir  = [];
 	protected string $basePath = '';
 
+	protected bool $closeHandle = true;
+
 	/**
 	 * Logger constructor.
 	 *
@@ -83,6 +85,16 @@ class Logger extends AbstractLogger
 
 		$this->file = $path.$fileName.'-'.date('Y-m-d').'.log';
 		$this->handle = fopen($this->file, 'ab');
+	}
+
+	public function keepHandle() : static {
+		$this->closeHandle = false;
+		return $this;
+	}
+
+	public function dontKeepHandle() : static {
+		$this->closeHandle = true;
+		return $this;
 	}
 
 	/**
@@ -193,6 +205,11 @@ class Logger extends AbstractLogger
 			}
 		}
 		fwrite($this->handle, sprintf('[%s] %s: %s'.$contextFormatted.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message));
+
+		if ($this->closeHandle) {
+			fclose($this->handle);
+			$this->handle = false;
+		}
 	}
 
 	/**
