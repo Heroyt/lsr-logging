@@ -46,7 +46,6 @@ class Logger extends AbstractLogger
 	 * @throws DirectoryCreationException
 	 */
 	public function __construct(string $path, string $fileName = 'logging') {
-
 		/** @var string|false $baseDir */
 		$baseDir = ini_get('open_basedir');
 		if ($baseDir !== false) {
