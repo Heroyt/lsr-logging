@@ -1,7 +1,7 @@
 {
 	"name": "lsr/logging",
 	"description": "Laser framework core - Logging",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"repositories": [
 		{
 			"type": "composer",
@@ -26,7 +26,7 @@
 	},
 	"require": {
 		"psr/log": "*",
-		"lsr/helpers": "^0.2-dev",
+		"lsr/helpers": "^0.2",
 		"dibi/dibi": "^4.2"
 	},
 	"extra": {
