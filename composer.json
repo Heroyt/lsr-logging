@@ -1,7 +1,7 @@
 {
 	"name": "lsr/logging",
 	"description": "Laser framework core - Logging",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"repositories": [
 		{
 			"type": "composer",
@@ -21,7 +21,7 @@
 	],
 	"require-dev": {
 		"roave/security-advisories": "dev-latest",
-		"phpunit/phpunit": "^9.5",
+		"phpunit/phpunit": "^10",
 		"phpstan/phpstan": "^1.8"
 	},
 	"require": {
