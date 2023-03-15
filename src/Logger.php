@@ -29,8 +29,6 @@ class Logger extends AbstractLogger
 
 	public const MAX_LOG_LIFE = '-2 days';
 	protected string $file;
-	/** @var false|resource */
-	protected $handle;
 	/** @var string[] */
 	protected array  $baseDir  = [];
 	protected string $basePath = '';
@@ -83,17 +81,6 @@ class Logger extends AbstractLogger
 		}
 
 		$this->file = $path.$fileName.'-'.date('Y-m-d').'.log';
-		$this->handle = fopen($this->file, 'ab');
-	}
-
-	public function keepHandle() : static {
-		$this->closeHandle = false;
-		return $this;
-	}
-
-	public function dontKeepHandle() : static {
-		$this->closeHandle = true;
-		return $this;
 	}
 
 	/**
@@ -169,13 +156,14 @@ class Logger extends AbstractLogger
 		}
 	}
 
-	/**
-	 * @post Close opened file handle
-	 */
-	public function __destruct() {
-		if (is_resource($this->handle)) {
-			fclose($this->handle);
-		}
+	public function keepHandle() : static {
+		$this->closeHandle = false;
+		return $this;
+	}
+
+	public function dontKeepHandle() : static {
+		$this->closeHandle = true;
+		return $this;
 	}
 
 	/**
@@ -190,12 +178,14 @@ class Logger extends AbstractLogger
 	 * @throws InvalidArgumentException|FileException
 	 */
 	public function log($level, $message, array $context = []) : void {
-		if (!is_resource($this->handle)) {
-			$this->handle = fopen($this->file, 'ab');
-			if ($this->handle === false) {
-				throw new FileException('Cannot open log file - '.$this->file);
-			}
+		// Check log file
+		if (!file_exists($this->file)) {
+			touch($this->file);
 		}
+		if (!is_writable($this->file)) {
+			chmod($this->file, 0777);
+		}
+
 		$contextFormatted = '';
 		if (!empty($context)) {
 			try {
@@ -203,12 +193,11 @@ class Logger extends AbstractLogger
 			} catch (JsonException) {
 			}
 		}
-		fwrite($this->handle, sprintf('[%s] %s: %s'.$contextFormatted.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message));
-
-		if ($this->closeHandle) {
-			fclose($this->handle);
-			$this->handle = false;
-		}
+		file_put_contents(
+			$this->file,
+			sprintf('[%s] %s: %s'.$contextFormatted.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message),
+			FILE_APPEND
+		);
 	}
 
 	/**
