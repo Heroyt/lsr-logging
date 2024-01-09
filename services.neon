@@ -2,6 +2,9 @@ parameters:
 	logger:
 		dir: '%constants.appDir%logs'
 		name: 'app'
+		logLife: '-2 days'
 services:
+	fsHelper: Lsr\Logging\FsHelper::getInstance()
+	logArchiver: Lsr\Logging\LogArchiver(@fsHelper, %logger.logLife%)
 	logger:
 		create: Lsr\Logging\Logger(%logger.dir%, %logger.name%)

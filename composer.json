@@ -1,7 +1,7 @@
 {
   "name": "lsr/logging",
   "description": "Laser framework core - Logging",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "repositories": [
     {
       "type": "composer",
