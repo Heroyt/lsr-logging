@@ -1,37 +1,38 @@
 {
-	"name": "lsr/logging",
-	"description": "Laser framework core - Logging",
-	"version": "0.2.3",
-	"repositories": [
-		{
-			"type": "composer",
-			"url": "https://packages.laserliga.cz"
-		}
-	],
-	"autoload": {
-		"psr-4": {
-			"Lsr\\Logging\\": "src/"
-		}
-	},
-	"authors": [
-		{
-			"name": "Tomáš Vojík",
-			"email": "vojik@wboy.cz"
-		}
-	],
-	"require-dev": {
-		"roave/security-advisories": "dev-latest",
-		"phpunit/phpunit": "^10",
-		"phpstan/phpstan": "^1.8"
-	},
-	"require": {
-		"psr/log": "*",
-		"lsr/helpers": "^0.2",
-		"dibi/dibi": "^4.2"
-	},
-	"extra": {
-		"branch-alias": {
-			"v0.2": "0.2.x-dev"
-		}
-	}
+  "name": "lsr/logging",
+  "description": "Laser framework core - Logging",
+  "version": "0.2.4",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.laserliga.cz"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Lsr\\Logging\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Tomáš Vojík",
+      "email": "vojik@wboy.cz"
+    }
+  ],
+  "require-dev": {
+    "roave/security-advisories": "dev-latest",
+    "phpunit/phpunit": "^10",
+    "phpstan/phpstan": "^1.8"
+  },
+  "require": {
+    "psr/log": "*",
+    "lsr/helpers": "^0.2",
+    "dibi/dibi": "^5",
+    "ext-zip": "*"
+  },
+  "extra": {
+    "branch-alias": {
+      "v0.2": "0.2.x-dev"
+    }
+  }
 }

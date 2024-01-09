@@ -5,7 +5,7 @@
 
 namespace Lsr\Logging\Exceptions;
 
-use Exception;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -13,7 +13,7 @@ use Throwable;
  *
  * @package eSoul\Logging
  */
-class DirectoryCreationException extends Exception
+class DirectoryCreationException extends RuntimeException
 {
 
 	public function __construct(string $path, Throwable $previous = null) {

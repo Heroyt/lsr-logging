@@ -13,11 +13,9 @@ use JsonException;
 use Lsr\Exceptions\FileException;
 use Lsr\Helpers\Tracy\DbTracyPanel;
 use Lsr\Helpers\Tracy\Events\DbEvent;
-use Lsr\Logging\Exceptions\ArchiveCreationException;
 use Lsr\Logging\Exceptions\DirectoryCreationException;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
-use ZipArchive;
 
 /**
  * Class Logger
@@ -27,13 +25,12 @@ use ZipArchive;
 class Logger extends AbstractLogger
 {
 
-	public const MAX_LOG_LIFE = '-2 days';
-	protected string $file;
-	/** @var string[] */
-	protected array  $baseDir  = [];
-	protected string $basePath = '';
+	protected readonly string $file;
 
 	protected bool $closeHandle = true;
+
+	private readonly FsHelper $fsHelper;
+	private bool $dirCreated = false;
 
 	/**
 	 * Logger constructor.
@@ -43,117 +40,14 @@ class Logger extends AbstractLogger
 	 *
 	 * @throws DirectoryCreationException
 	 */
-	public function __construct(string $path, string $fileName = 'logging') {
-		/** @var string|false $baseDir */
-		$baseDir = ini_get('open_basedir');
-		if ($baseDir !== false) {
-			$dirs = explode(':', $baseDir);
-			$this->basePath = '';
-			$this->baseDir = array_filter(explode(DIRECTORY_SEPARATOR, $dirs[0]), static function($dir) {
-				return !empty($dir) && $dir !== '.';
-			});
+	public function __construct(private string $path, private readonly string $fileName = 'logging') {
+		$this->fsHelper = FsHelper::getInstance();
+
+		if (!str_ends_with($this->path, '/')) {
+			$this->path .= '/';
 		}
 
-		$directory = '';
-		if ($path[0] !== '/' || !$this->checkWinPath($path)) {
-			$directory = '/';
-		}
-		$dirs = array_filter(explode(DIRECTORY_SEPARATOR, $path), static function($dir) {
-			return !empty($dir);
-		});
-		$dir = array_shift($dirs);
-		$directory .= $dir;
-		while ($dir === '..') {
-			$dir = array_shift($dirs);
-			$directory .= '/'.$dir;
-		}
-
-		$this->createDirRecursive($directory, $dirs);
-
-		if (!str_ends_with($path, '/')) {
-			$path .= '/';
-		}
-
-		try {
-			$this->archiveOld($path, $fileName);
-		} catch (ArchiveCreationException $e) {
-			file_put_contents($path.'logError-'.date('YmdHis'), 'Log error ('.$e->getCode().'): '.$path.$fileName.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
-		}
-
-		$this->file = $path.$fileName.'-'.date('Y-m-d').'.log';
-	}
-
-	/**
-	 * Checks if path is a Windows absolute path
-	 *
-	 * @param string $path
-	 *
-	 * @return bool
-	 */
-	protected function checkWinPath(string $path) : bool {
-		return DIRECTORY_SEPARATOR === '\\' && preg_match('/([A-Z]:)/', substr($path, 0, 2)) === 1;
-	}
-
-	/**
-	 * Create a directory structure to
-	 *
-	 * @param string   $directory Current directory path
-	 * @param string[] $path      Remaining subdirectories
-	 *
-	 * @throws DirectoryCreationException
-	 */
-	protected function createDirRecursive(string &$directory, array &$path) : void {
-		if (count($this->baseDir) > 0) {
-			$this->basePath .= '/'.array_shift($this->baseDir);
-		}
-		if ($this->basePath !== $directory && !file_exists($directory) && !mkdir($directory) && !is_dir($directory)) {
-			throw new DirectoryCreationException($directory);
-		}
-		if (count($path) > 0) {
-			$directory .= '/'.array_shift($path);
-			$this->createDirRecursive($directory, $path);
-		}
-	}
-
-	/**
-	 * Archive old log files
-	 *
-	 * @param string $path
-	 * @param string $fileName
-	 *
-	 * @throws ArchiveCreationException
-	 */
-	protected function archiveOld(string $path, string $fileName) : void {
-		/** @var string[]|false $files */
-		$files = glob($path.$fileName.'-*.log');
-		if ($files === false) {
-			$files = [];
-		}
-		$archiveFiles = [];
-		$maxLife = strtotime($this::MAX_LOG_LIFE);
-		foreach ($files as $file) {
-			$date = strtotime(str_replace([$path.$fileName.'-', '.log'], '', $file));
-			if ($date < $maxLife) {
-				$archiveFiles[] = $file;
-			}
-		}
-
-		if (count($archiveFiles) > 0) {
-			$archive = new ZipArchive();
-			$test = $archive->open($path.$fileName.'-'.date('Y-m-W').'.zip', ZipArchive::CREATE); // Create or open a zip file
-			if ($test !== true) {
-				throw new ArchiveCreationException($test);
-			}
-			foreach ($archiveFiles as $file) {
-				$archive->addFile($file, str_replace($path, '', $file));
-			}
-			$archive->close();
-
-			// Remove files after successful compression
-			foreach ($archiveFiles as $file) {
-				unlink($file);
-			}
-		}
+		$this->file = $this->path.$this->fileName.'-'.date('Y-m-d').'.log';
 	}
 
 	public function keepHandle() : static {
@@ -178,9 +72,18 @@ class Logger extends AbstractLogger
 	 * @throws InvalidArgumentException|FileException
 	 */
 	public function log($level, $message, array $context = []) : void {
+		// Create (check) directory only on first write
+		// This may optimize the constructor a bit if the Logger is initialized, but no logs are written.
+		if (!$this->dirCreated) {
+			$dirs = $this->fsHelper->extractPath($this->path);
+			$directory = $this->fsHelper->joinPath($dirs);
+			$this->fsHelper->createDirRecursive($directory, $dirs);
+			$this->dirCreated = true;
+		}
+
 		// Check log file
 		if (!file_exists($this->file)) {
-			touch($this->file);
+			touch($this->file); // Create file
 		}
 		if (!is_writable($this->file)) {
 			chmod($this->file, 0777);
@@ -193,11 +96,7 @@ class Logger extends AbstractLogger
 			} catch (JsonException) {
 			}
 		}
-		file_put_contents(
-			$this->file,
-			sprintf('[%s] %s: %s'.$contextFormatted.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message),
-			FILE_APPEND
-		);
+		file_put_contents($this->file, sprintf('[%s] %s: %s'.$contextFormatted.PHP_EOL, date('Y-m-d H:i:s'), strtoupper($level), $message), FILE_APPEND);
 	}
 
 	/**
