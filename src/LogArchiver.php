@@ -25,7 +25,7 @@ class LogArchiver
 	 * @param string|null $archiveDir
 	 * @throws ArchiveCreationException
 	 */
-	protected function archiveOld(string $path, string $fileName, ?string $archiveDir = null) : void {
+	public function archiveOld(string $path, string $fileName, ?string $archiveDir = null) : void {
 		/** @var string[]|false $files */
 		$files = glob($path.$fileName.'-*.log');
 		if ($files === false) {
