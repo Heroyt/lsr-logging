@@ -22,3 +22,8 @@ Network Trash Folder
 Temporary Items
 .apdisk
 *.lock
+build
+temp
+tmp
+logs
+.phpunit.cache

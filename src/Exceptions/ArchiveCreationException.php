@@ -6,6 +6,7 @@
 namespace Lsr\Logging\Exceptions;
 
 use Exception;
+use Lsr\Logging\LogArchiver;
 use Throwable;
 use ZipArchive;
 
@@ -27,6 +28,7 @@ class ArchiveCreationException extends Exception
 		ZipArchive::ER_OPEN   => 'The file could not be opened.',
 		ZipArchive::ER_READ   => 'Read error.',
 		ZipArchive::ER_SEEK   => 'Seek error.',
+		LogArchiver::ER_SAVE => 'Save error.',
 	];
 
 	public function __construct(int $errorCode, Throwable $previous = null) {

@@ -16,6 +16,7 @@ use Lsr\Helpers\Tracy\Events\DbEvent;
 use Lsr\Logging\Exceptions\DirectoryCreationException;
 use Psr\Log\AbstractLogger;
 use Psr\Log\InvalidArgumentException;
+use Throwable;
 
 /**
  * Class Logger
@@ -26,8 +27,6 @@ class Logger extends AbstractLogger
 {
 
 	protected readonly string $file;
-
-	protected bool $closeHandle = true;
 
 	private readonly FsHelper $fsHelper;
 	private bool $dirCreated = false;
@@ -50,16 +49,6 @@ class Logger extends AbstractLogger
 		$this->file = $this->path.$this->fileName.'-'.date('Y-m-d').'.log';
 	}
 
-	public function keepHandle() : static {
-		$this->closeHandle = false;
-		return $this;
-	}
-
-	public function dontKeepHandle() : static {
-		$this->closeHandle = true;
-		return $this;
-	}
-
 	/**
 	 * Logs with an arbitrary level.
 	 *
@@ -76,8 +65,7 @@ class Logger extends AbstractLogger
 		// This may optimize the constructor a bit if the Logger is initialized, but no logs are written.
 		if (!$this->dirCreated) {
 			$dirs = $this->fsHelper->extractPath($this->path);
-			$directory = $this->fsHelper->joinPath($dirs);
-			$this->fsHelper->createDirRecursive($directory, $dirs);
+			$this->fsHelper->createDirRecursive($dirs);
 			$this->dirCreated = true;
 		}
 
@@ -92,7 +80,7 @@ class Logger extends AbstractLogger
 		$contextFormatted = '';
 		if (!empty($context)) {
 			try {
-				$contextFormatted = ' '.json_encode($contextFormatted, JSON_THROW_ON_ERROR);
+				$contextFormatted = ' '.json_encode($context, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 			} catch (JsonException) {
 			}
 		}
@@ -102,11 +90,11 @@ class Logger extends AbstractLogger
 	/**
 	 * Log exception as an error + debug trace
 	 *
-	 * @param Exception $exception
+	 * @param Throwable $exception
 	 *
 	 * @return void
 	 */
-	public function exception(Exception $exception) : void {
+	public function exception(Throwable $exception) : void {
 		$this->error('Thrown Exception ('.$exception->getCode().'): '.$exception->getMessage());
 		$this->debug($exception->getTraceAsString());
 	}
@@ -137,6 +125,11 @@ class Logger extends AbstractLogger
 
 			// Log to file
 			$this->error($message);
+
+			$sql = $event->result->getSql();
+			if (!empty($sql)) {
+				$this->debug('SQL: '.$sql);
+			}
 		}
 		DbTracyPanel::logEvent($logEvent);
 	}

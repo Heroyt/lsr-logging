@@ -8,6 +8,8 @@ use ZipArchive;
 class LogArchiver
 {
 
+	public const ER_SAVE = 99;
+
 	private readonly int $maxLogTime;
 
 	public function __construct(
@@ -28,40 +30,56 @@ class LogArchiver
 	public function archiveOld(string $path, string $fileName, ?string $archiveDir = null) : void {
 		/** @var string[]|false $files */
 		$files = glob($path.$fileName.'-*.log');
-		if ($files === false) {
-			$files = [];
+		if (empty($files)) {
+			return;
 		}
 		$archiveFiles = [];
 		foreach ($files as $file) {
 			$date = strtotime(str_replace([$path.$fileName.'-', '.log'], '', $file));
 			if ($date < $this->maxLogTime) {
-				$archiveFiles[] = $file;
+				$week = date('Y-m-W', $date);
+				$archiveFiles[$week] ??= [];
+				$archiveFiles[$week][] = $file;
 			}
 		}
 
 		// Default to the same path as the log files
-		$archiveDir ??= $path;
+		if (!isset($archiveDir)) {
+			$archiveDir = $path;
+		}
+		else {
+			if ($archiveDir[0] !== '/') {
+				$archiveDir = $path.$archiveDir;
+			}
+		}
+
+		if (!str_ends_with($archiveDir, '/')) {
+			$archiveDir .= '/';
+		}
 
 		// Maybe create archive directory
 		$dirs = $this->fsHelper->extractPath($archiveDir);
-		$archiveDir = $this->fsHelper->joinPath($dirs);
-		$this->fsHelper->createDirRecursive($archiveDir, $dirs);
+		$this->fsHelper->createDirRecursive($dirs);
 
 		if (count($archiveFiles) > 0) {
-			// Get or create zip archive of the logs
-			$archive = new ZipArchive();
-			$test = $archive->open($archiveDir.$fileName.'-'.date('Y-m-W').'.zip', ZipArchive::CREATE); // Create or open a zip file
-			if ($test !== true) {
-				throw new ArchiveCreationException($test);
-			}
-			foreach ($archiveFiles as $file) {
-				$archive->addFile($file, str_replace($path, '', $file));
-			}
-			$archive->close();
+			foreach ($archiveFiles as $week => $files) {
+				// Get or create zip archive of the logs
+				$archive = new ZipArchive();
+				$test = $archive->open($archiveDir.$fileName.'-'.$week.'.zip', ZipArchive::CREATE); // Create or open a zip file
+				if ($test !== true) {
+					throw new ArchiveCreationException($test);
+				}
+				foreach ($files as $file) {
+					$archive->addFile($file, str_replace($path, '', $file));
+				}
+				if (!$archive->close()) {
+					throw new ArchiveCreationException($this::ER_SAVE);
+				}
 
-			// Remove files after successful compression
-			foreach ($archiveFiles as $file) {
-				unlink($file);
+				// Remove files after successful compression
+				foreach ($files as $file) {
+					unlink($file);
+				}
 			}
 		}
 	}

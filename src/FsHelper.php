@@ -11,16 +11,19 @@ class FsHelper
 
 	/** @var string[] */
 	public readonly array $baseDir;
-	public string $basePath = '';
 
-	public function __construct() {
+	/**
+	 * @param non-empty-string $directorySeparator
+	 */
+	public function __construct(
+		private readonly string $directorySeparator = DIRECTORY_SEPARATOR
+	) {
 		/** @var false|string $baseDir */
 		$baseDir = ini_get('open_basedir');
 		if ($baseDir !== false) {
 			$dirs = explode(':', $baseDir);
-			$this->basePath = '';
 			$this->baseDir = array_filter(
-				explode(DIRECTORY_SEPARATOR, $dirs[0]),
+				explode($this->directorySeparator, $dirs[0]),
 				static fn($dir) => !empty($dir) && $dir !== '.'
 			);
 		}
@@ -30,7 +33,7 @@ class FsHelper
 	}
 
 	public static function getInstance() : FsHelper {
-		self::$instance = new self;
+		self::$instance ??= new self;
 		return self::$instance;
 	}
 
@@ -43,17 +46,20 @@ class FsHelper
 	 *
 	 * @throws DirectoryCreationException
 	 */
-	public function createDirRecursive(string &$directory, array &$path, ?array $baseDir = null) : void {
+	public function createDirRecursive(array $path, string $directory = '', ?array $baseDir = null, string $basePath = '') : void {
+		if (empty($directory)) {
+			$directory .= '/'.array_shift($path);
+		}
 		$baseDir ??= $this->baseDir;
 		if (count($baseDir) > 0) {
-			$this->basePath .= '/'.array_shift($baseDir);
+			$basePath .= '/'.array_shift($baseDir);
 		}
-		if ($this->basePath !== $directory && !file_exists($directory) && !mkdir($directory) && !is_dir($directory)) {
+		if ($basePath !== $directory && !file_exists($directory) && !mkdir($directory) && !is_dir($directory)) {
 			throw new DirectoryCreationException($directory);
 		}
 		if (count($path) > 0) {
 			$directory .= '/'.array_shift($path);
-			$this->createDirRecursive($directory, $path, $baseDir);
+			$this->createDirRecursive($path, $directory, $baseDir, $basePath);
 		}
 	}
 
@@ -62,7 +68,15 @@ class FsHelper
 	 * @return string[]
 	 */
 	public function extractPath(string $path) : array {
-		return array_filter(explode(DIRECTORY_SEPARATOR, $path), static fn($dir) => !empty($dir));
+		return array_values(
+			array_filter(
+				explode(
+					$this->directorySeparator,
+					$path
+				),
+				static fn($dir) => !empty($dir)
+			)
+		);
 	}
 
 	/**
@@ -71,13 +85,21 @@ class FsHelper
 	 * @return string
 	 */
 	public function joinPath(array $path, bool $absolute = true) : string {
-		$directory = '';
-		$dir = array_shift($path);
-		$directory .= $dir;
-		while ($dir === '..') {
-			$dir = array_shift($path);
-			$directory .= '/'.$dir;
+		// Pre-scan path
+		$filtered = [];
+		foreach ($path as $dir) {
+			$dir = trim($dir);
+			if ($dir === '') {
+				continue;
+			}
+			if ($dir === '..' && count($filtered) > 0) {
+				array_pop($filtered);
+				continue;
+			}
+			$filtered[] = $dir;
 		}
+
+		$directory = implode($this->directorySeparator, $filtered);
 		return ($absolute && !$this->checkWinPath($directory) ? '/' : '').$directory;
 	}
 
@@ -89,7 +111,7 @@ class FsHelper
 	 * @return bool
 	 */
 	public function checkWinPath(string $path) : bool {
-		return DIRECTORY_SEPARATOR === '\\' && preg_match('/([A-Z]:)/', substr($path, 0, 2)) === 1;
+		return $this->directorySeparator === '\\' && preg_match('/([A-Z]:)/', substr($path, 0, 2)) === 1;
 	}
 
 }
