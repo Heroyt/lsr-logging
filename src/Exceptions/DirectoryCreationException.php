@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @author Tomáš Vojík <xvojik00@stud.fit.vutbr.cz>, <vojik@wboy.cz>
  */
@@ -15,8 +16,7 @@ use Throwable;
  */
 class DirectoryCreationException extends RuntimeException
 {
-
-	public function __construct(string $path, Throwable $previous = null) {
-		parent::__construct(sprintf('Failed creating logging directory: %s', $path), 0, $previous);
-	}
+    public function __construct(string $path, ?Throwable $previous = null) {
+        parent::__construct(sprintf('Failed creating logging directory: %s', $path), 0, $previous);
+    }
 }

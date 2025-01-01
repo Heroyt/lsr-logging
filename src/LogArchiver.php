@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Logging;
 
 use Lsr\Logging\Exceptions\ArchiveCreationException;
@@ -7,16 +9,17 @@ use ZipArchive;
 
 class LogArchiver
 {
-
-    public const ER_SAVE = 99;
+    public const int ER_SAVE = 99;
 
     private readonly int $maxLogTime;
 
     public function __construct(
-      private readonly FsHelper $fsHelper,
-      public readonly string    $maxLogLife = '-2 days',
+        private readonly FsHelper $fsHelper,
+        public readonly string    $maxLogLife = '-2 days',
     ) {
-        $this->maxLogTime = strtotime($this->maxLogLife);
+        $timestamp = strtotime($this->maxLogLife);
+        assert(is_int($timestamp));
+        $this->maxLogTime = $timestamp;
     }
 
     /**
@@ -28,17 +31,16 @@ class LogArchiver
      * @return string[]|null Array of formatted weeks that will be archived or null if no archive log files are found
      * @throws ArchiveCreationException
      */
-    public function archiveOld(string $path, string $fileName, ?string $archiveDir = null) : ?array {
+    public function archiveOld(string $path, string $fileName, ?string $archiveDir = null): ?array {
         $path = trailingSlashIt($path);
-        /** @var string[]|false $files */
-        $files = glob($path.$fileName.'-*.log');
+        $files = glob($path . $fileName . '-*.log');
         if (empty($files)) {
             return null;
         }
         $archiveFiles = [];
         foreach ($files as $file) {
-            $date = strtotime(str_replace([$path.$fileName.'-', '.log'], '', $file));
-            if ($date < $this->maxLogTime) {
+            $date = strtotime(str_replace([$path . $fileName . '-', '.log'], '', $file));
+            if ($date !== false && $date < $this->maxLogTime) {
                 $week = date('Y-m-W', $date);
                 $archiveFiles[$week] ??= [];
                 $archiveFiles[$week][] = $file;
@@ -48,9 +50,8 @@ class LogArchiver
         // Default to the same path as the log files
         if (!isset($archiveDir)) {
             $archiveDir = $path;
-        }
-        else if ($archiveDir[0] !== '/') {
-            $archiveDir = $path.$archiveDir;
+        } else if ($archiveDir[0] !== '/') {
+            $archiveDir = $path . $archiveDir;
         }
 
         if (!str_ends_with($archiveDir, '/')) {
@@ -66,8 +67,8 @@ class LogArchiver
                 // Get or create zip archive of the logs
                 $archive = new ZipArchive();
                 $test = $archive->open(
-                  $archiveDir.$fileName.'-'.$week.'.zip',
-                  ZipArchive::CREATE
+                    $archiveDir . $fileName . '-' . $week . '.zip',
+                    ZipArchive::CREATE
                 ); // Create or open a zip file
                 if ($test !== true) {
                     throw new ArchiveCreationException($test);
@@ -75,7 +76,7 @@ class LogArchiver
                 foreach ($files as $file) {
                     $archive->addFile($file, str_replace($path, '', $file));
                 }
-                if (!$archive->close()) {
+                if (!@$archive->close()) {
                     throw new ArchiveCreationException($this::ER_SAVE);
                 }
 
@@ -87,5 +88,4 @@ class LogArchiver
         }
         return array_keys($archiveFiles);
     }
-
 }
