@@ -44,7 +44,7 @@ class Logger extends AbstractLogger
             $this->path .= '/';
         }
 
-        $this->file = $this->path . $this->fileName . '-' . date('Y-m-d') . '.log';
+        $this->file = $this->path.$this->fileName.'-'.date('Y-m-d').'.log';
     }
 
     /**
@@ -58,7 +58,7 @@ class Logger extends AbstractLogger
      *
      * @throws InvalidArgumentException|FileException
      */
-    public function log($level, $message, array $context = []): void {
+    public function log($level, $message, array $context = []) : void {
         // Create (check) directory only on first write
         // This may optimize the constructor a bit if the Logger is initialized, but no logs are written.
         if (!$this->dirCreated) {
@@ -75,21 +75,14 @@ class Logger extends AbstractLogger
             chmod($this->file, 0777);
         }
 
-        $contextFormatted = '';
-        if (!empty($context)) {
-            try {
-                $contextFormatted = ' ' . json_encode($context, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
-            } catch (JsonException) {
-            }
-        }
         file_put_contents(
             $this->file,
             sprintf(
-                '[%s] %s: %s' . $contextFormatted . PHP_EOL,
+                '[%s] %s: %s',
                 date('Y-m-d H:i:s'),
                 strtoupper($level),
                 $message
-            ),
+            ).$this->getFormattedContext($context)."\n",
             FILE_APPEND
         );
     }
@@ -101,8 +94,8 @@ class Logger extends AbstractLogger
      *
      * @return void
      */
-    public function exception(Throwable $exception): void {
-        $this->error('Thrown Exception (' . $exception->getCode() . '): ' . $exception->getMessage());
+    public function exception(Throwable $exception) : void {
+        $this->error('Thrown Exception ('.$exception->getCode().'): '.$exception->getMessage());
         $this->debug($exception->getTraceAsString());
     }
 
@@ -113,20 +106,35 @@ class Logger extends AbstractLogger
      *
      * @return void
      */
-    public function logDb(Event $event): void {
+    public function logDb(Event $event) : void {
         // DB query error
         if ($event->result instanceof Exception) {
             $message = $event->result->getMessage();
             if ($code = $event->result->getCode()) {
-                $message = '(' . $code . ') ' . $message;
+                $message = '('.$code.') '.$message;
             }
             // Log to file
             $this->error($message);
 
             $sql = $event->result->getSql();
             if (!empty($sql)) {
-                $this->debug('SQL: ' . $sql);
+                $this->debug('SQL: '.$sql);
             }
         }
+    }
+
+    /**
+     * @param  array<string,mixed>  $context
+     * @return string
+     */
+    protected function getFormattedContext(array $context) : string {
+        $contextFormatted = '';
+        if (!empty($context)) {
+            try {
+                $contextFormatted = ' '.json_encode($context, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+            } catch (JsonException) {
+            }
+        }
+        return $contextFormatted;
     }
 }
