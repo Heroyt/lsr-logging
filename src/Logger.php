@@ -24,6 +24,8 @@ use Throwable;
  */
 class Logger extends AbstractLogger
 {
+    public const string CHANNEL = 'channel';
+
     protected readonly string $file;
 
     private readonly FsHelper $fsHelper;

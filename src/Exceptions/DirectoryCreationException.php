@@ -6,7 +6,6 @@
 
 namespace Lsr\Logging\Exceptions;
 
-use RuntimeException;
 use Throwable;
 
 /**
@@ -14,9 +13,9 @@ use Throwable;
  *
  * @package eSoul\Logging
  */
-class DirectoryCreationException extends RuntimeException
+class DirectoryCreationException extends FileSystemException
 {
     public function __construct(string $path, ?Throwable $previous = null) {
-        parent::__construct(sprintf('Failed creating logging directory: %s', $path), 0, $previous);
+        parent::__construct($path, sprintf('Failed creating logging directory: %s', $path), $previous);
     }
 }
